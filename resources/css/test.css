@@ -1,0 +1,21 @@
+/* test.css */
+.test-container {
+    max-width: 800px;
+    margin: 50px auto;
+    padding: 20px;
+    background-color: white;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    text-align: center;
+}
+
+.test-container h1 {
+    font-size: 2.5rem;
+    color: #1e40af; /* blue-800 */
+    margin-bottom: 10px;
+}
+
+.test-container p {
+    font-size: 1.2rem;
+    color: #374151; /* gray-700 */
+}
