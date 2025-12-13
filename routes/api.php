@@ -27,3 +27,14 @@ $data =["name" => "Ibrahim ",
 
 return response()->json($data);
 });
+
+//Api calling
+Route::middleware(['auth'])->group(function ()
+{
+// For charts 
+    Route::get('/analytics/spending-by-category', [AnalyticsController::class, 'spendingByCategory']);
+    Route::get('/analytics/monthly-summary', [AnalyticsController::class, 'monthlySummary']);
+    Route::get('/analytics/budget-status', [AnalyticsController::class, 'budgetStatus']);
+
+
+});
