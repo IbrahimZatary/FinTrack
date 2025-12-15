@@ -3,77 +3,47 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Auth\LoginRequest;
-use App\Providers\RouteServiceProvider;
+use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
     /**
      * Display the login view.
-     *
-     * @return \Illuminate\View\View
      */
-    public function create()
+    public function create(): View
     {
         return view('auth.login');
     }
 
     /**
      * Handle an incoming authentication request.
-     *
-     * @param  \App\Http\Requests\Auth\LoginRequest  $request
-     * @return \Illuminate\Http\RedirectResponse
      */
-   public function store(LoginRequest $request)
-{
-    // TEMPORARY: Accept any email/password for testing
-    $email = $request->email;
-    $password = $request->password;
-    
-    // Check if user exists, if not create one
-    $user = User::where('email', $email)->first();
-    
-    if (!$user) {
-        // Auto-create user with any email
-        $user = User::create([
-            'name' => 'Test User',
-            'email' => $email,
-            'password' => bcrypt($password),
-            'email_verified_at' => now(),
+    public function store(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required'],
         ]);
-        
-        // Log the user in
-        Auth::login($user);
-        
-        $request->session()->regenerate();
-        
-        return redirect()->intended(RouteServiceProvider::HOME);
+
+        if (Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
+            $request->session()->regenerate();
+
+            return redirect()->intended('dashboard');
+        }
+
+        return back()->withErrors([
+            'email' => 'The provided credentials do not match our records.',
+        ])->onlyInput('email');
     }
-    
-    // If user exists, try to login normally
-    $credentials = $request->only('email', 'password');
-    
-    if (Auth::attempt($credentials, $request->boolean('remember'))) {
-        $request->session()->regenerate();
-        return redirect()->intended(RouteServiceProvider::HOME);
-    }
-    
-    // If password doesn't match, still login (temporary for testing)
-    Auth::login($user);
-    $request->session()->regenerate();
-    
-    return redirect()->intended(RouteServiceProvider::HOME);
-}
 
     /**
      * Destroy an authenticated session.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse
      */
-    public function destroy(Request $request)
+    public function destroy(Request $request): RedirectResponse
     {
         Auth::guard('web')->logout();
 
