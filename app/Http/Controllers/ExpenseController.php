@@ -2,92 +2,78 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Expense;
+use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ExpenseController extends Controller
 {
-    //
     public function index(Request $request)
-{
-    $query = auth()->user()->expenses()->with('category');
-    
-    // Apply filters if provided
-    if ($request->filled('category_id')) {
-        $query->where('category_id', $request->category_id);
-    }
-    
-    if ($request->filled('start_date') && $request->filled('end_date')) {
-        $query->whereBetween('date', [$request->start_date, $request->end_date]);
-    }
-    
-    if ($request->filled('search')) {
-        $query->where('description', 'like', '%' . $request->search . '%');
-    }
-    
-    // Get paginated results
-    $expenses = $query->latest()->paginate(20);
-    
-    // Return VIEW instead of JSON
-    return view('expenses.index', [
-        'expenses' => $expenses,
-        'categories' => auth()->user()->categories()->get()
-    ]);
-}
-    
-    if ($request->filled('start_date') && $request->filled('end_date')) {
-        $query->whereBetween('date', [$request->start_date, $request->end_date]);
-    }
-    
-    if ($request->filled('search')) {
-        $query->where('description', 'like', '%' . $request->search . '%');
-    }
-    
-    // Get paginated results
-    $expenses = $query->latest()->paginate(20);
-    
-    // Return JSON for now (we'll add views later)
-    return view('expenses.index', [
-            'expenses' => $expenses,
-            'categories' => auth()->user()->categories()->get()
-        ]);
-}    // GET /expenses
-public function create() {}   // GET /expenses/create  
-public function store(StoreExpenseRequest $request)
-{
-    // Request is automatically validated here!
-    // If validation fails, user gets redirected back with errors
-    
-    // Get validated data
-    $validated = $request->validated();
-    
-    // Add user_id to the data
-    $validated['user_id'] = auth()->id();
-    
-    // Create expense
-    $expense = Expense::create($validated);
-    
-    // Return success response
-    return view('expenses.index', [
-            'expenses' => $expenses,
-            'categories' => auth()->user()->categories()->get()
-        ]);
-}
-public function edit() {}     // GET /expenses/{id}/edit
-public function update(UpdateExpenseRequest $request, Expense $expense)
-{
-    // Check if user owns this expense
-    if ($expense->user_id !== auth()->id()) {
+    {
+        $user = Auth::user();
+        
+        $query = $user->expenses()->with('category');
+        
+        if ($request->filled('start_date')) {
+            $query->where('date', '>=', $request->start_date);
+        }
+        
+        if ($request->filled('end_date')) {
+            $query->where('date', '<=', $request->end_date);
+        }
+        
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+        
+        $expenses = $query->orderBy('date', 'desc')->paginate(20);
+        
+        $categories = $user->categories()->orderBy('name')->get();
+        
         return view('expenses.index', [
             'expenses' => $expenses,
-            'categories' => auth()->user()->categories()->get()
+            'categories' => $categories
         ]);
-}
-public function destroy(Expense $expense)
-{
-    if ($expense->user_id !== auth()->id()) {
-        return view('expenses.index', [
-            'expenses' => $expenses,
-            'categories' => auth()->user()->categories()->get()
+    }
+    
+    public function store(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'category_id' => 'required|exists:categories,id',
+            'date' => 'required|date',
+            'description' => 'nullable|string|max:255'
         ]);
-}
+        
+        $expense = Expense::create([
+            'user_id' => Auth::id(),
+            'amount' => $request->amount,
+            'category_id' => $request->category_id,
+            'date' => $request->date,
+            'description' => $request->description
+        ]);
+        
+        // Return JSON for AJAX requests
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Expense added successfully!',
+                'expense' => $expense->load('category')
+            ]);
+        }
+        
+        return redirect()->route('expenses.index')->with('success', 'Expense added successfully!');
+    }
+    
+    public function destroy(Expense $expense)
+    {
+        if ($expense->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized action.');
+        }
+        
+        $expense->delete();
+        
+        return redirect()->route('expenses.index')->with('success', 'Expense deleted successfully!');
+    }
 }

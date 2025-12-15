@@ -10,11 +10,25 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $user = Auth::user();
-        
-        // Allow year/month selection via request, default to current
-        $year = $request->get('year', Carbon::now()->year);
+        // get month and year from request or use current
         $month = $request->get('month', Carbon::now()->month);
+        $year = $request->get('year', Carbon::now()->year);
+        
+        // simply return the view
+        return view('dashboard.index', [
+            'period' => [
+                'month' => $month,
+                'year' => $year
+            ]
+        ]);
+    }
+    
+  
+    public function apiData(Request $request)
+    {
+        $user = Auth::user();
+        $month = $request->get('month', Carbon::now()->month);
+        $year = $request->get('year', Carbon::now()->year);
         
         $currentDate = Carbon::create($year, $month, 1);
         
@@ -30,24 +44,21 @@ class DashboardController extends Controller
             ->where('month', $month)
             ->sum('amount');
         
-        // 3. Recent expenses (last 10, all time)
+        // 3. Recent expenses (last 10, 
         $recentExpenses = $user->expenses()
             ->with('category')
             ->latest()
             ->limit(10)
             ->get()
             ->map(function ($expense) {
-                $categoryName = $expense->category ? $expense->category->name : 'Uncategorized';
-                $categoryColor = $expense->category ? $expense->category->color : '#CCCCCC';
-                
+                $category = $expense->category;
                 return [
                     'id' => $expense->id,
                     'amount' => $expense->amount,
-                    'date' => $expense->date,
+                    'date' => $expense->date->format('Y-m-d'),
                     'description' => $expense->description,
-                    'category' => $categoryName,
-                    'color' => $categoryColor,
-                    'created_at' => $expense->created_at->format('Y-m-d H:i:s'),
+                    'category' => $category ? $category->name : 'Uncategorized',
+                    'color' => $category ? $category->color : '#CCCCCC',
                 ];
             });
         
@@ -60,25 +71,22 @@ class DashboardController extends Controller
             ->with('category')
             ->get()
             ->map(function ($item) {
-                $categoryName = $item->category ? $item->category->name : 'Uncategorized';
-                $categoryColor = $item->category ? $item->category->color : '#CCCCCC';
-                
+                $category = $item->category;
                 return [
-                    'category' => $categoryName,
+                    'category' => $category ? $category->name : 'Uncategorized',
                     'amount' => $item->total,
-                    'color' => $categoryColor
+                    'color' => $category ? $category->color : '#CCCCCC'
                 ];
             });
         
-        // 5. Budget vs Actual for selected month
+        // 5. Budget & Actual for selected month
         $budgetStatus = $user->budgets()
             ->where('year', $year)
             ->where('month', $month)
             ->with('category')
             ->get()
             ->map(function ($budget) use ($user, $year, $month) {
-                $categoryName = $budget->category ? $budget->category->name : 'Uncategorized';
-                
+                $category = $budget->category;
                 $spent = $user->expenses()
                     ->where('category_id', $budget->category_id)
                     ->whereYear('date', $year)
@@ -88,7 +96,7 @@ class DashboardController extends Controller
                 $percentage = $budget->amount > 0 ? ($spent / $budget->amount) * 100 : 0;
                 
                 return [
-                    'category' => $categoryName,
+                    'category' => $category ? $category->name : 'Uncategorized',
                     'budget' => $budget->amount,
                     'spent' => $spent,
                     'remaining' => $budget->amount - $spent,
@@ -97,7 +105,7 @@ class DashboardController extends Controller
                 ];
             });
         
-        // 6. Daily average calculations
+        //  Daily average calculations
         $daysInMonth = $currentDate->daysInMonth;
         $currentDay = ($year == Carbon::now()->year && $month == Carbon::now()->month) 
             ? Carbon::now()->day 
@@ -106,7 +114,7 @@ class DashboardController extends Controller
         $dailyAverage = $currentDay > 0 ? $monthlyExpenses / $currentDay : 0;
         $projectedMonthly = $dailyAverage * $daysInMonth;
         
-        // 7. Compare with previous month
+        //  Compare with previous month
         $previousMonth = $currentDate->copy()->subMonth();
         $previousMonthExpenses = $user->expenses()
             ->whereYear('date', $previousMonth->year)
@@ -117,59 +125,25 @@ class DashboardController extends Controller
             ? (($monthlyExpenses - $previousMonthExpenses) / $previousMonthExpenses) * 100 
             : 0;
         
-        // 8. Overall totals (all time)
-        $totalExpenses = $user->expenses()->sum('amount');
-        $averageExpense = $user->expenses()->count() > 0 ? $user->expenses()->avg('amount') : 0;
-        $largestExpense = $user->expenses()->count() > 0 ? $user->expenses()->max('amount') : 0;
-        
-        $overallTotals = [
-            'total_expenses' => $totalExpenses,
-            'average_expense' => $averageExpense,
-            'largest_expense' => $largestExpense,
-        ];
-        
-        return view('dashboard.index', [
-        'period' => [
-            'month' => $month,
-            'year' => $year
-        ]
-    ]);
-    }
-    
-    /**
-     * Get dashboard summary for the current user
-     */
-    public function summary()
-    {
-        $user = Auth::user();
-        
-        // Get last expense with null check
-        $lastExpense = $user->expenses()->latest()->first();
-        $lastExpenseText = $lastExpense ? $lastExpense->created_at->diffForHumans() : 'No expenses';
-        
-        // Get last category with null check
-        $lastCategory = $user->categories()->latest()->first();
-        $lastCategoryText = $lastCategory ? $lastCategory->created_at->diffForHumans() : 'No categories';
-        
-        // Get last budget with null check
-        $lastBudget = $user->budgets()->latest()->first();
-        $lastBudgetText = $lastBudget ? $lastBudget->created_at->diffForHumans() : 'No budgets';
-        
         return response()->json([
-            'user' => [
-                'name' => $user->name,
-                'email' => $user->email,
-                'member_since' => $user->created_at->format('M Y')
-            ],
-            'counts' => [
-                'categories' => $user->categories()->count(),
-                'expenses' => $user->expenses()->count(),
-                'budgets' => $user->budgets()->count()
-            ],
-            'recent_activity' => [
-                'last_expense' => $lastExpenseText,
-                'last_category' => $lastCategoryText,
-                'last_budget' => $lastBudgetText
+            'selected_period' => $currentDate->format('F Y'),
+            'monthly_spent' => round($monthlyExpenses, 2),
+            'monthly_budget' => round($monthlyBudget, 2),
+            'remaining' => round($monthlyBudget - $monthlyExpenses, 2),
+            'budget_utilization' => $monthlyBudget > 0 ? round(($monthlyExpenses / $monthlyBudget) * 100, 1) : 0,
+            'daily_average' => round($dailyAverage, 2),
+            'projected_monthly' => round($projectedMonthly, 2),
+            'month_over_month' => round($monthOverMonth, 1),
+            'recent_expenses' => $recentExpenses,
+            'category_spending' => $categorySpending,
+            'budget_status' => $budgetStatus,
+            'summary' => [
+                'total_categories' => $user->categories()->count(),
+                'total_expenses' => $user->expenses()->count(),
+                'total_budgets' => $user->budgets()->count(),
+                'current_day' => $currentDay,
+                'days_in_month' => $daysInMonth,
+                'days_remaining' => $daysInMonth - $currentDay
             ]
         ]);
     }

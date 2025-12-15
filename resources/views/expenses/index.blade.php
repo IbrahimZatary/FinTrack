@@ -3,67 +3,106 @@
 @section('title', 'Expenses')
 
 @section('header-buttons')
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
-        <i class="fas fa-plus me-1"></i> Add Expense
-    </button>
+<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+    <i class="fas fa-plus me-1"></i> Add Expense
+</button>
 @endsection
 
 @section('content')
-<!-- Filter Form -->
-<div class="card mb-4">
-    <div class="card-body">
-        <form id="filterForm" class="row g-3">
-            <div class="col-md-3">
-                <label class="form-label">Start Date</label>
-                <input type="date" name="start_date" class="form-control" value="{{ date('Y-m-01') }}">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">End Date</label>
-                <input type="date" name="end_date" class="form-control" value="{{ date('Y-m-d') }}">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Category</label>
-                <select name="category_id" class="form-control">
-                    <option value="">All Categories</option>
-                    <!-- Categories will be loaded by JS -->
-                </select>
-            </div>
-            <div class="col-md-3 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100">
-                    <i class="fas fa-filter me-1"></i> Filter
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+{{ $categories->count() }} -->
+ {{ Auth::id() }} -->
 
-<!-- Expenses Table -->
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0">All Expenses</h5>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Description</th>
-                        <th>Category</th>
-                        <th>Amount</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="expenses-table">
-                    <tr><td colspan="5" class="text-center">Loading expenses...</td></tr>
-                </tbody>
-            </table>
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">All Expenses</h5>
+            </div>
+            <div class="card-body">
+                <!-- Filter Form -->
+                <form method="GET" action="{{ route('expenses.index') }}" class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ request('start_date', date('Y-m-01')) }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ request('end_date', date('Y-m-d')) }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Category</label>
+                        <select name="category_id" class="form-control">
+                            <option value="">All Categories</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>
+                                    {{ $category->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter me-1"></i> Filter
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Expenses Table -->
+                @if($expenses->count() > 0)
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Category</th>
+                                <th>Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($expenses as $expense)
+                            <tr>
+                                <td>{{ $expense->date->format('Y-m-d') }}</td>
+                                <td>{{ $expense->description ?? '-' }}</td>
+                                <td>
+                                    @if($expense->category)
+                                        <span style="display: inline-block; width: 12px; height: 12px; background-color: {{ $expense->category->color }}; border-radius: 50%; margin-right: 6px;"></span>
+                                        {{ $expense->category->name }}
+                                    @else
+                                        <span class="text-muted">Uncategorized</span>
+                                    @endif
+                                </td>
+                                <td class="fw-bold">${{ number_format($expense->amount, 2) }}</td>
+                                <td>
+                                    <form action="{{ route('expenses.destroy', $expense) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this expense?')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                <div class="mt-4">
+                    {{ $expenses->links() }}
+                </div>
+                @else
+                <div class="text-center py-5">
+                    <p class="text-muted">No expenses found</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+                        <i class="fas fa-plus me-1"></i> Add Your First Expense
+                    </button>
+                </div>
+                @endif
+            </div>
         </div>
-        
-        <!-- Pagination -->
-        <nav id="pagination" class="mt-4">
-            <!-- Pagination will be loaded here -->
-        </nav>
     </div>
 </div>
 
@@ -75,7 +114,7 @@
                 <h5 class="modal-title">Add New Expense</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form id="addExpenseForm">
+            <form action="{{ route('expenses.store') }}" method="POST">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -84,8 +123,11 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Category</label>
-                        <select name="category_id" class="form-control" required id="categorySelect">
+                        <select name="category_id" class="form-control" required>
                             <option value="">Select Category</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                            @endforeach
                         </select>
                     </div>
                     <div class="mb-3">
@@ -93,8 +135,8 @@
                         <input type="date" name="date" class="form-control" value="{{ date('Y-m-d') }}" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea name="description" class="form-control" rows="2"></textarea>
+                        <label class="form-label">Description (Optional)</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="Optional description"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -107,196 +149,137 @@
 </div>
 
 <script>
+//  debug to check categories
+console.log('Expenses page loaded');
+console.log('Categories count from PHP: {{ $categories->count() }}');
+
+// JavaScript fallback in case PHP rendering fails
 document.addEventListener('DOMContentLoaded', function() {
-    let categories = [];
-    let currentPage = 1;
+    const categorySelects = document.querySelectorAll('select[name="category_id"]');
+    let hasOptions = false;
     
-    // Load initial data
-    loadCategories();
-    loadExpenses();
-    
-    // Form submissions
-    document.getElementById('filterForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        loadExpenses(1);
+    categorySelects.forEach(select => {
+        if (select.options.length > 1) {
+            hasOptions = true;
+        }
     });
     
-    document.getElementById('addExpenseForm').addEventListener('submit', addExpense);
+    if (!hasOptions) {
+        console.log('No categories found in dropdowns, trying JavaScript load...');
+        loadCategoriesViaJS();
+    }
     
-    function loadCategories() {
-        fetch('/categories')
+    function loadCategoriesViaJS() {
+        fetch('/api/categories')
             .then(response => response.json())
             .then(data => {
-                categories = data.categories || [];
-                updateCategoryDropdowns();
+                if (data.success && data.categories && data.categories.length > 0) {
+                    console.log('Loaded categories via JS:', data.categories.length);
+                    updateDropdowns(data.categories);
+                }
             })
             .catch(error => console.error('Error loading categories:', error));
     }
     
-    function updateCategoryDropdowns() {
-        const categorySelect = document.getElementById('categorySelect');
-        const filterSelect = document.querySelector('select[name="category_id"]');
-        
-        // Clear existing options except first
-        [categorySelect, filterSelect].forEach(select => {
+    function updateDropdowns(categories) {
+        document.querySelectorAll('select[name="category_id"]').forEach(select => {
+            
             while (select.options.length > 1) {
                 select.remove(1);
             }
-        });
-        
-        // Add categories
-        categories.forEach(category => {
-            const option = `<option value="${category.id}">${category.name}</option>`;
-            categorySelect.innerHTML += option;
-            filterSelect.innerHTML += option;
-        });
-    }
-    
-    function loadExpenses(page = 1) {
-        currentPage = page;
-        
-        const form = document.getElementById('filterForm');
-        const formData = new FormData(form);
-        
-        let url = `/expenses?page=${page}`;
-        if (formData.get('start_date')) url += `&start_date=${formData.get('start_date')}`;
-        if (formData.get('end_date')) url += `&end_date=${formData.get('end_date')}`;
-        if (formData.get('category_id')) url += `&category_id=${formData.get('category_id')}`;
-        
-        fetch(url)
-            .then(response => response.json())
-            .then(data => renderExpenses(data))
-            .catch(error => {
-                console.error('Error loading expenses:', error);
-                showAlert('danger', 'Error loading expenses');
+            
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.id;
+                option.textContent = category.name;
+                select.appendChild(option);
             });
-    }
-    
-    function renderExpenses(data) {
-        const expenses = data.expenses?.data || data.expenses || [];
-        const tbody = document.getElementById('expenses-table');
-        
-        if (expenses.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No expenses found</td></tr>';
-            document.getElementById('pagination').innerHTML = '';
-            return;
-        }
-        
-        let html = '';
-        expenses.forEach(expense => {
-            const category = categories.find(c => c.id === expense.category_id);
-            html += `
-                <tr>
-                    <td>${expense.date}</td>
-                    <td>${expense.description || '-'}</td>
-                    <td>
-                        ${category ? `
-                            <span class="category-color" style="background-color: ${category.color}"></span>
-                            ${category.name}
-                        ` : 'Uncategorized'}
-                    </td>
-                    <td class="fw-bold">${formatCurrency(expense.amount)}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary" onclick="editExpense(${expense.id})">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteExpense(${expense.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-        });
-        
-        tbody.innerHTML = html;
-        
-        // Render pagination if available
-        if (data.expenses?.links) {
-            renderPagination(data.expenses.links);
-        }
-    }
-    
-    function renderPagination(links) {
-        const container = document.getElementById('pagination');
-        if (links.length <= 3) {
-            container.innerHTML = '';
-            return;
-        }
-        
-        let html = '<ul class="pagination justify-content-center">';
-        links.forEach(link => {
-            if (link.url) {
-                const page = new URL(link.url).searchParams.get('page') || 1;
-                html += `
-                    <li class="page-item ${link.active ? 'active' : ''}">
-                        <a class="page-link" href="#" onclick="loadExpenses(${page}); return false;">
-                            ${link.label.replace('&laquo;', '«').replace('&raquo;', '»')}
-                        </a>
-                    </li>
-                `;
-            } else {
-                html += `<li class="page-item disabled"><span class="page-link">${link.label}</span></li>`;
-            }
-        });
-        html += '</ul>';
-        container.innerHTML = html;
-    }
-    
-    function addExpense(e) {
-        e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-        
-        fetch('/expenses', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showAlert('success', 'Expense added successfully');
-                form.reset();
-                bootstrap.Modal.getInstance(document.getElementById('addExpenseModal')).hide();
-                loadExpenses(currentPage);
-                loadCategories(); // Refresh categories
-            } else {
-                showAlert('danger', data.message || 'Error adding expense');
-            }
-        })
-        .catch(error => {
-            showAlert('danger', 'Error adding expense');
         });
     }
-    
-    window.editExpense = function(id) {
-        alert('Edit feature will be added in next version. For now, delete and recreate.');
-    };
-    
-    window.deleteExpense = function(id) {
-        if (confirm('Are you sure you want to delete this expense?')) {
-            fetch(`/expenses/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showAlert('success', 'Expense deleted successfully');
-                    loadExpenses(currentPage);
-                } else {
-                    showAlert('danger', 'Error deleting expense');
-                }
-            })
-            .catch(error => {
-                showAlert('danger', 'Error deleting expense');
-            });
-        }
-    };
 });
 </script>
 @endsection
+
+{{-- Export functionality JavaScript --}}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle export button clicks
+    document.querySelectorAll('.export-pdf, .export-excel, .export-csv').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const exportType = this.getAttribute('data-type');
+            exportExpenses(exportType);
+        });
+    });
+    
+    function exportExpenses(type) {
+        // Get current filter values
+        const startDate = document.querySelector('input[name="start_date"]')?.value || '';
+        const endDate = document.querySelector('input[name="end_date"]')?.value || '';
+        const categoryId = document.querySelector('select[name="category_id"]')?.value || '';
+        
+        // Build query string
+        let queryParams = [];
+        if (startDate) queryParams.push(`start_date=${startDate}`);
+        if (endDate) queryParams.push(`end_date=${endDate}`);
+        if (categoryId) queryParams.push(`category_id=${categoryId}`);
+        
+        const queryString = queryParams.length > 0 ? '?' + queryParams.join('&') : '';
+        
+        // Define export URLs
+        const exportUrls = {
+            'pdf': `/expenses/export/pdf${queryString}`,
+            'excel': `/expenses/export/excel${queryString}`,
+            'csv': `/expenses/export/csv${queryString}`
+        };
+        
+        // Show loading
+        const originalText = event.target.innerHTML;
+        event.target.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Exporting...';
+        event.target.disabled = true;
+        
+        // Trigger download
+        const link = document.createElement('a');
+        link.href = exportUrls[type];
+        link.download = '';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Restore button
+        setTimeout(() => {
+            event.target.innerHTML = originalText;
+            event.target.disabled = false;
+        }, 1000);
+    }
+    
+    // Add export success/error handling
+    document.addEventListener('export:success', function(e) {
+        showAlert('success', 'Export completed successfully!');
+    });
+    
+    document.addEventListener('export:error', function(e) {
+        showAlert('danger', 'Export failed: ' + e.detail.message);
+    });
+    
+    function showAlert(type, message) {
+        // Create alert element
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
+        alertDiv.innerHTML = `
+            <strong>${type === 'success' ? '✓' : '✗'}</strong> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(alertDiv);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+});
+</script>

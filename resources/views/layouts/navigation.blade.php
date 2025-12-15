@@ -1,7 +1,7 @@
 <nav class="bg-white shadow p-4">
     <div class="max-w-7xl mx-auto flex justify-between items-center">
         <a href="{{ url('/') }}" class="text-xl font-bold text-blue-600">
-            ExpenseTracker
+            FinTrack
         </a>
 
         <div class="space-x-4">

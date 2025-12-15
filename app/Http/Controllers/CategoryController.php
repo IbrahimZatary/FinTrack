@@ -2,51 +2,68 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class CategoryController extends Controller
 {
-    //
-    public function index(Request $request)
+    public function index()
     {
-        $query = auth()->user()->categories();
+        $categories = Auth::user()->categories()->withCount('expenses')->get();
         
-        if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+        return view('categories.index', [
+            'categories' => $categories
+        ]);
+    }
+    
+    public function store(Request $request)
+    {
+        Log::info('Category store called', ['request' => $request->all()]);
+        
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:50|unique:categories,name,NULL,id,user_id,' . Auth::id(),
+                'color' => 'required|string|max:7'
+            ]);
+            
+            Log::info('Validation passed', ['validated' => $validated]);
+            
+            $category = Category::create([
+                'user_id' => Auth::id(),
+                'name' => $validated['name'],
+                'color' => $validated['color']
+            ]);
+            
+            Log::info('Category created', ['category' => $category]);
+            
+            return redirect()->route('categories.index')
+                ->with('success', 'Category created successfully!');
+                
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation failed', ['errors' => $e->errors()]);
+            return back()->withErrors($e->errors())->withInput();
+            
+        } catch (\Exception $e) {
+            Log::error('Category creation error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return back()->withErrors(['error' => 'Error adding category: ' . $e->getMessage()])
+                        ->withInput();
         }
-        
-        $categories = $query->orderBy('name')->paginate(20);
-        
-        return view('categories.index', [
-            'categories' => $categories
-        ]);
-    }
-    
-    public function store(StoreCategoryRequest $request)
-    {
-        $validated = $request->validated();
-        $validated['user_id'] = auth()->id();
-        
-        $category = Category::create($validated);
-        
-        return view('categories.index', [
-            'categories' => $categories
-        ]);
-    }
-    
-    public function update(UpdateCategoryRequest $request, Category $category)
-    {
-        if ($category->user_id !== auth()->id()) {
-            return view('categories.index', [
-            'categories' => $categories
-        ]);
     }
     
     public function destroy(Category $category)
     {
-        if ($category->user_id !== auth()->id()) {
-            return view('categories.index', [
-            'categories' => $categories
-        ]);
+        if ($category->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized action.');
+        }
+        
+        $category->delete();
+        
+        return redirect()->route('categories.index')->with('success', 'Category deleted successfully!');
     }
 }

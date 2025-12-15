@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\BudgetController;
+use App\Http\Controllers\AnalyticsController;
+
+Route::get('/', function () {
+    return redirect('/dashboard');
+});
+
+require __DIR__.'/auth.php';
+
+Route::middleware(['auth'])->group(function () {
+    // Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    
+    // Use resource routes which automatically create named routes
+    Route::resource('expenses', ExpenseController::class);
+    Route::resource('categories', CategoryController::class);
+    Route::resource('budgets', BudgetController::class);
+    
+    // Analytics
+    Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
+    
+    // Dashboard API
+    Route::get('/dashboard/data', [DashboardController::class, 'apiData'])->name('dashboard.data');
+});

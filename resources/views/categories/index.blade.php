@@ -3,19 +3,84 @@
 @section('title', 'Categories')
 
 @section('header-buttons')
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
-        <i class="fas fa-plus me-1"></i> Add Category
-    </button>
+<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+    <i class="fas fa-plus me-1"></i> Add Category
+</button>
 @endsection
 
 @section('content')
+<!-- Display success/error messages -->
+@if(session('success'))
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+@endif
+
+@if($errors->any())
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <ul class="mb-0">
+        @foreach($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+@endif
+
 <div class="row" id="categories-container">
-    <div class="col-12 text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
+    @if($categories->count() > 0)
+        @foreach($categories as $category)
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="mb-0 d-flex align-items-center">
+                                <span class="category-color me-2" style="background-color: {{ $category->color }}"></span>
+                                {{ $category->name }}
+                            </h5>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                    data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <form action="{{ route('categories.destroy', $category) }}" method="POST">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="dropdown-item text-danger" 
+                                                onclick="return confirm('Delete this category? Expenses will become uncategorized.')">
+                                            <i class="fas fa-trash me-2"></i> Delete
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Expenses</span>
+                            <span class="fw-bold">{{ $category->expenses_count }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <p class="mt-2">Loading categories...</p>
-    </div>
+        @endforeach
+    @else
+        <div class="col-12 text-center py-5">
+            <i class="fas fa-tags fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">No Categories Yet</h4>
+            <p class="text-muted">Create your first category to organize expenses</p>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+                <i class="fas fa-plus me-1"></i> Create Your First Category
+            </button>
+        </div>
+    @endif
 </div>
 
 <!-- Add Category Modal -->
@@ -26,16 +91,32 @@
                 <h5 class="modal-title">Add New Category</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form id="addCategoryForm">
+            <form action="{{ route('categories.store') }}" method="POST" id="addCategoryForm">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Category Name</label>
-                        <input type="text" name="name" class="form-control" required>
+                        <label class="form-label">Category Name *</label>
+                        <input type="text" name="name" class="form-control" 
+                               placeholder="e.g., Food, Transportation, Bills" 
+                               value="{{ old('name') }}"
+                               required>
+                        @error('name')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Color</label>
-                        <input type="color" name="color" class="form-control form-control-color" value="#4361ee" required>
+                        <label class="form-label">Color *</label>
+                        <div class="d-flex align-items-center">
+                            <input type="color" name="color" class="form-control form-control-color me-3" 
+                                   value="{{ old('color', '#9361ee') }}" 
+                                   title="Choose color" style="width: 60px; height: 40px;">
+                            <input type="text" name="color_text" class="form-control" 
+                                   value="{{ old('color', '#9361ee') }}" 
+                                   placeholder="#9361ee" style="max-width: 120px;" readonly>
+                        </div>
+                        @error('color')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -49,132 +130,35 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    loadCategories();
+    // Update text input when color picker changes
+    const colorPicker = document.querySelector('input[name="color"]');
+    const colorText = document.querySelector('input[name="color_text"]');
     
-    document.getElementById('addCategoryForm').addEventListener('submit', addCategory);
+    colorPicker.addEventListener('input', function() {
+        colorText.value = this.value;
+    });
     
-    function loadCategories() {
-        fetch('/categories')
-            .then(response => response.json())
-            .then(data => renderCategories(data.categories || []))
-            .catch(error => {
-                console.error('Error loading categories:', error);
-                showAlert('danger', 'Error loading categories');
-            });
-    }
+    // Pre-fill modal with old values if there was an error
+    @if($errors->any())
+        const modal = new bootstrap.Modal(document.getElementById('addCategoryModal'));
+        modal.show();
+    @endif
     
-    function renderCategories(categories) {
-        const container = document.getElementById('categories-container');
-        
-        if (categories.length === 0) {
-            container.innerHTML = `
-                <div class="col-12 text-center py-5">
-                    <p class="text-muted">No categories yet</p>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
-                        <i class="fas fa-plus me-1"></i> Add Your First Category
-                    </button>
-                </div>
-            `;
-            return;
-        }
-        
-        let html = '';
-        categories.forEach(category => {
-            const expenseCount = category.expenses_count || 0;
-            const totalSpent = category.total_spent || 0;
-            
-            html += `
-                <div class="col-md-4 mb-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-3">
-                                <div>
-                                    <h5 class="mb-0 d-flex align-items-center">
-                                        <span class="category-color me-2" style="background-color: ${category.color}"></span>
-                                        ${category.name}
-                                    </h5>
-                                </div>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary" type="button" 
-                                            data-bs-toggle="dropdown">
-                                        <i class="fas fa-ellipsis-v"></i>
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item text-danger" href="#" onclick="deleteCategory(${category.id})">
-                                            <i class="fas fa-trash me-2"></i> Delete
-                                        </a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div class="mt-3">
-                                <div class="d-flex justify-content-between">
-                                    <span class="text-muted">Expenses</span>
-                                    <span class="fw-bold">${expenseCount}</span>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span class="text-muted">Total Spent</span>
-                                    <span class="fw-bold">${formatCurrency(totalSpent)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        container.innerHTML = html;
-    }
-    
-    function addCategory(e) {
-        e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-        
-        fetch('/categories', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showAlert('success', 'Category added successfully');
-                form.reset();
-                bootstrap.Modal.getInstance(document.getElementById('addCategoryModal')).hide();
-                loadCategories();
-            } else {
-                showAlert('danger', data.message || 'Error adding category');
-            }
-        })
-        .catch(error => {
-            showAlert('danger', 'Error adding category');
-        });
-    }
-    
-    window.deleteCategory = function(categoryId) {
-        if (confirm('Are you sure you want to delete this category? Expenses in this category will become uncategorized.')) {
-            fetch(`/categories/${categoryId}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showAlert('success', 'Category deleted successfully');
-                    loadCategories();
-                } else {
-                    showAlert('danger', data.message || 'Error deleting category');
-                }
-            })
-            .catch(error => {
-                showAlert('danger', 'Error deleting category');
-            });
-        }
-    };
+    // Handle form submission
+    document.getElementById('addCategoryForm').addEventListener('submit', function(e) {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+    });
 });
 </script>
+
+<style>
+.category-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-block;
+}
+</style>
 @endsection

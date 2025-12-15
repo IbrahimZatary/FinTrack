@@ -2,33 +2,43 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;  // ← MAKE SURE THIS IS IMPORTED
 
 class Category extends Model
 {
+    use HasFactory;
+    
     protected $fillable = [
-        'user_id', 
-        'name', 
-        'color', 
-        'icon'
+        'user_id',
+        'name',
+        'color'
     ];
     
-    // Return type should match the actual return
-    public function user(): BelongsTo
+    // Prevent duplicate category names for same user
+    public static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($category) {
+            // Check if user already has category with same name
+            $exists = self::where('user_id', $category->user_id)
+                         ->where('name', $category->name)
+                         ->exists();
+            
+            if ($exists) {
+                throw new \Exception('You already have a category with this name.');
+            }
+        });
+    }
+    
+    public function user()
     {
         return $this->belongsTo(User::class);
     }
     
-    // This returns HasMany, so type hint should be HasMany
-    public function expenses(): HasMany
+    public function expenses()
     {
         return $this->hasMany(Expense::class);
-    }
-    
-    public function budgets(): HasMany
-    {
-        return $this->hasMany(Budget::class);
     }
 }
