@@ -3,11 +3,9 @@ const defaultTheme = require('tailwindcss/defaultTheme');
 /** @type {import('tailwindcss').Config} */
 module.exports = {
     content: [
-        './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
-        './storage/framework/views/*.php',
-        './resources/views/**/*.blade.php',
+        './resources/views/**/*.blade.php',   // Breeze & custom views
+        './resources/js/**/*.js',             // JS files that may have Tailwind classes
     ],
-
     theme: {
         extend: {
             fontFamily: {
@@ -15,6 +13,7 @@ module.exports = {
             },
         },
     },
-
-    plugins: [require('@tailwindcss/forms')],
+    plugins: [
+        require('@tailwindcss/forms'),        // Forms plugin
+    ],
 };
