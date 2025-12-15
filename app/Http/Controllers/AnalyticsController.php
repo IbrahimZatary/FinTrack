@@ -6,6 +6,26 @@ use Illuminate\Http\Request;
 
 class AnalyticsController extends Controller
 {
+
+
+    public function spendingByCategory()
+{
+    $data = auth()->user()->expenses()
+        ->selectRaw('category_id, SUM(amount) as total')
+        ->whereMonth('date', now()->month)
+        ->groupBy('category_id')
+        ->with('category')
+        ->get()
+        ->map(function ($item) {
+            return [
+                'category' => $item->category->name,
+                'amount' => $item->total,
+                'color' => $item->category->color
+            ];
+        });
+    
+    return response()->json($data);
+} 
     // For charts Json
     /**
      * Display a listing of the resource.
