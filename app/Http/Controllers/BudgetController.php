@@ -26,10 +26,15 @@ class BudgetController extends Controller
                          ->orderBy('month', 'desc')
                          ->paginate(20);
         
-        return response()->json([
-            'success' => true,
-            'data' => $budgets,
-            'categories' => auth()->user()->categories()->get()
+        return view('budgets.index', [
+            'budgets' => $budgets,
+            'categories' => auth()->user()->categories()->get(),
+            'months' => [
+                1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
+                5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
+                9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'
+            ],
+            'current_year' => date('Y')
         ]);
     }
     
@@ -40,51 +45,45 @@ class BudgetController extends Controller
         
         $budget = Budget::create($validated);
         
-        return response()->json([
-            'success' => true,
-            'message' => 'Budget created',
-            'data' => $budget->load('category')
-        ], 201);
-    }
-    
-    public function show(Budget $budget)
-    {
-        if ($budget->user_id !== auth()->id()) {
-            return response()->json(['error' => 'Not authorized'], 403);
-        }
-        
-        return response()->json([
-            'success' => true,
-            'data' => $budget->load('category')
+        return view('budgets.index', [
+            'budgets' => $budgets,
+            'categories' => auth()->user()->categories()->get(),
+            'months' => [
+                1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
+                5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
+                9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'
+            ],
+            'current_year' => date('Y')
         ]);
     }
     
     public function update(UpdateBudgetRequest $request, Budget $budget)
     {
         if ($budget->user_id !== auth()->id()) {
-            return response()->json(['error' => 'Not authorized'], 403);
-        }
-        
-        $budget->update($request->validated());
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Budget updated',
-            'data' => $budget->load('category')
+            return view('budgets.index', [
+            'budgets' => $budgets,
+            'categories' => auth()->user()->categories()->get(),
+            'months' => [
+                1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
+                5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
+                9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'
+            ],
+            'current_year' => date('Y')
         ]);
     }
     
     public function destroy(Budget $budget)
     {
         if ($budget->user_id !== auth()->id()) {
-            return response()->json(['error' => 'Not authorized'], 403);
-        }
-        
-        $budget->delete();
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Budget deleted'
+            return view('budgets.index', [
+            'budgets' => $budgets,
+            'categories' => auth()->user()->categories()->get(),
+            'months' => [
+                1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
+                5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
+                9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'
+            ],
+            'current_year' => date('Y')
         ]);
     }
 }

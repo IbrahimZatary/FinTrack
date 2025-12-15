@@ -1,29 +1,14 @@
 <?php
+$file = 'routes/web.php';
+if (!file_exists($file)) {
+    echo "❌ routes/web.php not found\n";
+    exit;
+}
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ExpenseController;
-use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\BudgetController;
-use App\Http\Controllers\AnalyticsController;
+$content = file_get_contents($file);
 
-Route::get('/', function () {
-    return view('welcome');
-});
-
-Route::middleware(['auth'])->group(function () {
-    // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    
-    // CRUD Routes
-    Route::resource('expenses', ExpenseController::class);
-    Route::resource('categories', CategoryController::class);
-    Route::resource('budgets', BudgetController::class);
-    
-    // Analytics - MAKE SURE THIS IS CORRECT
-    Route::get('/analytics/spending-by-category', [AnalyticsController::class, 'spendingByCategory']);
-});
-
+// Define the routes we need to add
+$newRoutes = <<<'ROUTES'
 
 // Expense Tracker Application Routes
 Route::middleware(['auth'])->group(function () {
@@ -56,5 +41,50 @@ Route::middleware(['auth'])->group(function () {
         return view('analytics.index');
     });
 });
+ROUTES;
 
-require __DIR__.'/auth.php';
+// Check if routes already exist
+if (strpos($content, "Route::get('/expenses'") === false) {
+    // Find where to add the routes (before require auth.php)
+    if (strpos($content, "require __DIR__.'/auth.php'") !== false) {
+        $content = str_replace(
+            "require __DIR__.'/auth.php';",
+            $newRoutes . "\n\nrequire __DIR__.'/auth.php';",
+            $content
+        );
+        echo "✅ Added routes before auth.php\n";
+    } else {
+        // Just append at the end
+        $content .= "\n" . $newRoutes;
+        echo "✅ Appended routes to end of file\n";
+    }
+    
+    file_put_contents($file, $content);
+    echo "✅ All routes added successfully!\n";
+} else {
+    echo "⚠️ Routes already exist in the file\n";
+    
+    // Check each route individually
+    $missingRoutes = [];
+    if (strpos($content, "Route::get('/expenses'") === false) $missingRoutes[] = '/expenses';
+    if (strpos($content, "Route::get('/categories'") === false) $missingRoutes[] = '/categories';
+    if (strpos($content, "Route::get('/budgets'") === false) $missingRoutes[] = '/budgets';
+    if (strpos($content, "Route::get('/analytics'") === false) $missingRoutes[] = '/analytics';
+    
+    if (!empty($missingRoutes)) {
+        echo "Missing routes: " . implode(', ', $missingRoutes) . "\n";
+        
+        // Add missing routes
+        $content .= "\n" . $newRoutes;
+        file_put_contents($file, $content);
+        echo "✅ Added missing routes\n";
+    }
+}
+
+// Show the added routes
+echo "\nAdded these routes:\n";
+echo "GET /dashboard\n";
+echo "GET /expenses\n";
+echo "GET /categories\n";
+echo "GET /budgets\n";
+echo "GET /analytics\n";

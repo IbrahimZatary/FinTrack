@@ -17,9 +17,8 @@ class CategoryController extends Controller
         
         $categories = $query->orderBy('name')->paginate(20);
         
-        return response()->json([
-            'success' => true,
-            'data' => $categories
+        return view('categories.index', [
+            'categories' => $categories
         ]);
     }
     
@@ -30,58 +29,24 @@ class CategoryController extends Controller
         
         $category = Category::create($validated);
         
-        return response()->json([
-            'success' => true,
-            'message' => 'Category created',
-            'data' => $category
-        ], 201);
-    }
-    
-    public function show(Category $category)
-    {
-        if ($category->user_id !== auth()->id()) {
-            return response()->json(['error' => 'Not authorized'], 403);
-        }
-        
-        return response()->json([
-            'success' => true,
-            'data' => $category
+        return view('categories.index', [
+            'categories' => $categories
         ]);
     }
     
     public function update(UpdateCategoryRequest $request, Category $category)
     {
         if ($category->user_id !== auth()->id()) {
-            return response()->json(['error' => 'Not authorized'], 403);
-        }
-        
-        $category->update($request->validated());
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Category updated',
-            'data' => $category
+            return view('categories.index', [
+            'categories' => $categories
         ]);
     }
     
     public function destroy(Category $category)
     {
         if ($category->user_id !== auth()->id()) {
-            return response()->json(['error' => 'Not authorized'], 403);
-        }
-        
-        if ($category->expenses()->count() > 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot delete category with expenses'
-            ], 422);
-        }
-        
-        $category->delete();
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Category deleted'
+            return view('categories.index', [
+            'categories' => $categories
         ]);
     }
 }

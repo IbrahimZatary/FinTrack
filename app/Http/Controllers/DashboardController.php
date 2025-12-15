@@ -128,46 +128,12 @@ class DashboardController extends Controller
             'largest_expense' => $largestExpense,
         ];
         
-        return response()->json([
-            // Current month stats
-            'selected_period' => $currentDate->format('F Y'),
-            'monthly_spent' => round($monthlyExpenses, 2),
-            'monthly_budget' => round($monthlyBudget, 2),
-            'remaining' => round($monthlyBudget - $monthlyExpenses, 2),
-            'budget_utilization' => $monthlyBudget > 0 ? round(($monthlyExpenses / $monthlyBudget) * 100, 1) : 0,
-            
-            // Daily stats
-            'daily_average' => round($dailyAverage, 2),
-            'projected_monthly' => round($projectedMonthly, 2),
-            
-            // Trends
-            'month_over_month' => round($monthOverMonth, 1),
-            
-            // Data lists
-            'recent_expenses' => $recentExpenses,
-            'category_spending' => $categorySpending,
-            'budget_status' => $budgetStatus,
-            
-            // Summary
-            'summary' => [
-                'total_categories' => $user->categories()->count(),
-                'total_expenses' => $user->expenses()->count(),
-                'total_budgets' => $user->budgets()->count(),
-                'current_day' => $currentDay,
-                'days_in_month' => $daysInMonth,
-                'days_remaining' => $daysInMonth - $currentDay
-            ],
-            
-            // Overall stats
-            'overall_totals' => $overallTotals,
-            
-            // Metadata
-            'period' => [
-                'year' => $year,
-                'month' => $month,
-                'is_current' => ($year == Carbon::now()->year && $month == Carbon::now()->month)
-            ]
-        ]);
+        return view('dashboard.index', [
+        'period' => [
+            'month' => $month,
+            'year' => $year
+        ]
+    ]);
     }
     
     /**
