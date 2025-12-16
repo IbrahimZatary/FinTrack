@@ -32,19 +32,21 @@ class DashboardController extends Controller
         
         $currentDate = Carbon::create($year, $month, 1);
         
-        // 1. Current selected month expenses
+        //  current selected month expenses
         $monthlyExpenses = $user->expenses()
             ->whereYear('date', $year)
             ->whereMonth('date', $month)
             ->sum('amount');
         
-        // 2. Current selected month budget
+        // current selected month budget
         $monthlyBudget = $user->budgets()
             ->where('year', $year)
             ->where('month', $month)
             ->sum('amount');
+
+
         
-        // 3. Recent expenses (last 10, 
+        //        recent expenses (last 10, 
         $recentExpenses = $user->expenses()
             ->with('category')
             ->latest()
@@ -62,7 +64,7 @@ class DashboardController extends Controller
                 ];
             });
         
-        // 4. Category-wise spending for selected month
+        //  Category wise spending for  month
         $categorySpending = $user->expenses()
             ->selectRaw('category_id, SUM(amount) as total')
             ->whereYear('date', $year)
@@ -79,7 +81,7 @@ class DashboardController extends Controller
                 ];
             });
         
-        // 5. Budget & Actual for selected month
+        //  budget  Actual for selected month
         $budgetStatus = $user->budgets()
             ->where('year', $year)
             ->where('month', $month)
@@ -105,7 +107,7 @@ class DashboardController extends Controller
                 ];
             });
         
-        //  Daily average calculations
+        //  daily avg calculations
         $daysInMonth = $currentDate->daysInMonth;
         $currentDay = ($year == Carbon::now()->year && $month == Carbon::now()->month) 
             ? Carbon::now()->day 
@@ -114,7 +116,7 @@ class DashboardController extends Controller
         $dailyAverage = $currentDay > 0 ? $monthlyExpenses / $currentDay : 0;
         $projectedMonthly = $dailyAverage * $daysInMonth;
         
-        //  Compare with previous month
+        //  compare    previous month
         $previousMonth = $currentDate->copy()->subMonth();
         $previousMonthExpenses = $user->expenses()
             ->whereYear('date', $previousMonth->year)
