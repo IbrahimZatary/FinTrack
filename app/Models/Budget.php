@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Budget extends Model
 {
-    // ADD category_id to fillable
+    // add category_id
     protected $fillable = [
         'user_id', 
-        'category_id',  // ← ADD THIS
+        'category_id', // here adding
         'amount', 
         'month', 
         'year'
