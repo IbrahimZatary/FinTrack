@@ -17,18 +17,18 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('category_id')->constrained()->onDelete('cascade');
             
-            // FIXED: DECIMAL for money (10 digits total, 2 decimal places)
+            // decimal for money
             $table->decimal('amount', 10, 2);
             
-            // FIXED: DATE type for dates
+
             $table->date('date');
             
             $table->text('description')->nullable();
             $table->string('receipt_path')->nullable();
-            $table->softDeletes(); // For trash functionality
+            $table->softDeletes(); // for soft delete
             $table->timestamps();
             
-            // Index for faster queries
+            // index for faster queries
             $table->index(['user_id', 'date']);
         });
     }
