@@ -9,18 +9,18 @@ return new class extends Migration
     public function up(): void
     {
         if (!Schema::hasTable('users')) {
-            // If users doesn't exist, skip this migration
+            // here check ff users doesn't exist
             return;
         }
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('name');
-            $table->string('color', 7); // #FF0000 format
+            $table->string('color', 7); 
             $table->string('icon')->nullable();
             $table->timestamps();
             
-            // User can't have duplicate category names
+            // doing this to user can't have duplicate category names
             $table->unique(['user_id', 'name']);
         });
     }
