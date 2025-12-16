@@ -15,6 +15,10 @@ class AnalyticsController extends Controller
         
         // determine the date
         $dateRange = $this->getDateRange($period);
+
+
+
+        
         
         // get data for theanalytics
         $data = [
@@ -74,8 +78,8 @@ class AnalyticsController extends Controller
                 ];
             case 'all':
                 return [
-                    'start' => Carbon::create(2000, 1, 1), // Far past
-                    'end' => Carbon::now()->addYears(10)   // Far future
+                    'start' => Carbon::create(2000, 1, 1), 
+                    'end' => Carbon::now()->addYears(10) 
                 ];
             default: // monthly
                 return [
@@ -159,16 +163,16 @@ class AnalyticsController extends Controller
         $expenses = $user->expenses()
             ->whereBetween('date', [$dateRange['start'], $dateRange['end']])
             ->get();
-        
+        // convert 
         foreach ($expenses as $expense) {
             $dayOfWeek = Carbon::parse($expense->date)->dayOfWeek;
-            $dayIndex = $dayOfWeek == 0 ? 6 : $dayOfWeek - 1; // Convert to Mon-Sun
+            $dayIndex = $dayOfWeek == 0 ? 6 : $dayOfWeek - 1; 
             
             $pattern[$dayIndex] += $expense->amount;
             $count[$dayIndex]++;
         }
         
-        // Calculate averages
+        //  here just calculate averages
         $averages = [];
         foreach ($pattern as $index => $total) {
             $averages[$index] = $count[$index] > 0 ? $total / $count[$index] : 0;
