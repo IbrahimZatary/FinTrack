@@ -10,10 +10,10 @@ class Expense extends Model
 {
     use SoftDeletes;
     
-    // ADD category_id to fillable array
+    // add category_id  
     protected $fillable = [
         'user_id', 
-        'category_id',  // ← ADD THIS
+        'category_id',  // here also
         'amount', 
         'date', 
         'description', 
@@ -26,8 +26,6 @@ class Expense extends Model
     ];
     
     protected $dates = ['deleted_at'];
-    
-    // Fix type hint: BelongsTo not hasMany
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
